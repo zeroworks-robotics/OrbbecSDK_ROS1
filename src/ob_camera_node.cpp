@@ -74,7 +74,7 @@ void OBCameraNode::init() {
     xy_table_data_ = new float[xy_table_data_size_];
   }
   rgb_is_decoded_ = false;
-  if (diagnostics_frequency_ > 0.0) {
+  if (diagnostics_frequency_ > 0.0 && !isOpenNIDevice(device_->getDeviceInfo()->pid())) {
     diagnostics_thread_ = std::make_shared<std::thread>([this]() { setupDiagnosticUpdater(); });
   }
   is_initialized_ = true;
@@ -165,6 +165,8 @@ void OBCameraNode::getParameters() {
   left_ir_rotation_ = nh_private_.param<int>("left_ir_rotation", -1);
   right_ir_rotation_ = nh_private_.param<int>("right_ir_rotation", -1);
   enable_color_auto_exposure_ = nh_private_.param<bool>("enable_color_auto_exposure", true);
+  enable_color_auto_exposure_priority_ =
+      nh_private_.param<bool>("enable_color_auto_exposure_priority", false);
   enable_ir_auto_exposure_ = nh_private_.param<bool>("enable_ir_auto_exposure", true);
   ir_exposure_ = nh_private_.param<int>("ir_exposure_", -1);
   enable_ir_long_exposure_ = nh_private_.param<bool>("enable_ir_long_exposure", false);
@@ -276,10 +278,10 @@ void OBCameraNode::getParameters() {
   }
   ROS_INFO_STREAM("current time domain:" << time_domain_);
 
-  enable_sync_host_time_ = nh_private_.param<bool>("enable_sync_host_time", "global");
-  ROS_INFO_STREAM("enable_sync_host_time:" << enable_sync_host_time_);
-  if (enable_sync_host_time_ && !isOpenNIDevice(device_info_->pid())) {
+  enable_sync_host_time_ = nh_private_.param<bool>("enable_sync_host_time", true);
+  if (enable_sync_host_time_ && isHostTimeSyncSupported(device_info_->pid())) {
     device_->timerSyncWithHost();
+    ROS_INFO_STREAM("enable_sync_host_time:" << enable_sync_host_time_);
     if (time_domain_ == "device") {
       sync_host_time_timer_ =
           nh_private_.createTimer(ros::Duration(1800.0), [this](const ros::TimerEvent&) {
@@ -1210,7 +1212,7 @@ void OBCameraNode::onNewColorFrameCallback() {
     colorFrameQueue_.pop();
     rgb_is_decoded_ = decodeColorFrameToBuffer(frameSet->colorFrame(), rgb_buffer_);
     publishPointCloud(frameSet);
-    onNewFrameCallback(frameSet->colorFrame(), IMAGE_STREAMS.at(2));
+    onNewFrameCallback(frameSet->colorFrame(), IMAGE_STREAMS.at(0));
   }
 
   ROS_INFO_STREAM("Color frame thread exit!");

@@ -126,49 +126,53 @@ int usbdevfs_reset() {
 
 void signalHandler(int signum) {
   std::cout << "Received signal: " << signum << std::endl;
-  std::string log_dir = "Log/";
+  if (signum == SIGINT || signum == SIGTERM) {
+    ros::shutdown();
+  } else {
+    std::string log_dir = "Log/";
 
-  // Get current time and format it.format as "2024_05_20_12_34_56"
-  std::time_t now = std::time(nullptr);
-  std::tm *local_time = std::localtime(&now);
-  std::ostringstream time_stream;
-  time_stream << std::put_time(local_time, "%Y_%m_%d_%H_%M_%S");
-  std::string log_file_name = g_camera_name + "_crash_stack_trace_" + time_stream.str() + ".log";
-  std::string log_file_path = log_dir + log_file_name;
+    // Get current time and format it.format as "2024_05_20_12_34_56"
+    std::time_t now = std::time(nullptr);
+    std::tm *local_time = std::localtime(&now);
+    std::ostringstream time_stream;
+    time_stream << std::put_time(local_time, "%Y_%m_%d_%H_%M_%S");
+    std::string log_file_name = g_camera_name + "_crash_stack_trace_" + time_stream.str() + ".log";
+    std::string log_file_path = log_dir + log_file_name;
 
-  // Ensure log directory exists
-  if (!boost::filesystem::exists(log_dir)) {
-    if (!boost::filesystem::create_directories(log_dir)) {
-      std::cerr << "Failed to create log directory: " << log_dir << std::endl;
-      exit(signum);
+    // Ensure log directory exists
+    if (!boost::filesystem::exists(log_dir)) {
+      if (!boost::filesystem::create_directories(log_dir)) {
+        std::cerr << "Failed to create log directory: " << log_dir << std::endl;
+        exit(signum);
+      }
     }
-  }
-  auto abs_path = boost::filesystem::absolute(log_dir);
-  std::cout << "Log crash stack trace to " << abs_path.string() << "/" << log_file_name
-            << std::endl;
+    auto abs_path = boost::filesystem::absolute(log_dir);
+    std::cout << "Log crash stack trace to " << abs_path.string() << "/" << log_file_name
+              << std::endl;
 
-  // Write stack trace to log file.
-  {
-    std::ofstream log_file(log_file_path, std::ios::app);
-    if (log_file.is_open()) {
-      log_file << "Received signal: " << signum << std::endl;
-      backward::StackTrace st;
-      st.load_here(32);  // Capture stack
-      backward::Printer p;
-      p.print(st, log_file);  // Print stack to log file
-    } else {
-      std::cerr << "Failed to open log file: " << log_file_path << std::endl;
+    // Write stack trace to log file.
+    {
+      std::ofstream log_file(log_file_path, std::ios::app);
+      if (log_file.is_open()) {
+        log_file << "Received signal: " << signum << std::endl;
+        backward::StackTrace st;
+        st.load_here(32);  // Capture stack
+        backward::Printer p;
+        p.print(st, log_file);  // Print stack to log file
+      } else {
+        std::cerr << "Failed to open log file: " << log_file_path << std::endl;
+      }
+      log_file.close();
     }
-    log_file.close();
+
+    // usbdevfs reset before exit
+    std::cout << "start usbdevfs reset " << std::endl;
+    usbdevfs_reset();
+    std::cout << "start usbdevfs reset finish" << std::endl;
+
+    std::cout << "save crash stack trace log to file finish and exit program." << std::endl;
+    exit(signum);  // Exit program
   }
-
-  // usbdevfs reset before exit
-  std::cout << "start usbdevfs reset " << std::endl;
-  usbdevfs_reset();
-  std::cout << "start usbdevfs reset finish" << std::endl;
-
-  std::cout << "save crash stack trace log to file finish and exit program." << std::endl;
-  exit(signum);  // Exit program
 }
 
 OBCameraNodeDriver::OBCameraNodeDriver(ros::NodeHandle &nh, ros::NodeHandle &nh_private)
@@ -200,6 +204,8 @@ void OBCameraNodeDriver::init() {
   sigaction(SIGABRT, &sa, nullptr);
   sigaction(SIGFPE, &sa, nullptr);
   sigaction(SIGILL, &sa, nullptr);
+  sigaction(SIGINT, &sa, nullptr);
+  sigaction(SIGTERM, &sa, nullptr);
 
   auto log_level = nh_private_.param<std::string>("log_level", "info");
   g_camera_name = nh_private_.param<std::string>("camera_name", "camera");
@@ -348,6 +354,12 @@ std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDeviceByUSBPort(
 
 void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &device) {
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
+
+  // check device connected flag again after get lock
+  if (device_connected_) {
+    return;
+  }
+
   if (device_) {
     ROS_WARN("device_ is not null, reset device_");
     device_.reset();
@@ -382,12 +394,18 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
   // if (!isOpenNIDevice(device_info_->pid())) {
   //   ctx_->enableDeviceClockSync(1800000);
   // }
+  std::string major = std::to_string(ob::Version::getMajor());
+  std::string minor = std::to_string(ob::Version::getMinor());
+  std::string patch = std::to_string(ob::Version::getPatch());
+  std::string version = major + "." + minor + "." + patch;
   CHECK_NOTNULL(device_info_.get());
   std::string connection_type = device_info_->connectionType();
   ROS_INFO_STREAM("Device " << device_info_->name() << " connected");
   ROS_INFO_STREAM("Serial number: " << device_info_->serialNumber());
   ROS_INFO_STREAM("Firmware version: " << device_info_->firmwareVersion());
   ROS_INFO_STREAM("Hardware version: " << device_info_->hardwareVersion());
+  ROS_INFO_STREAM("Wrapper version: " << OB_ROS_VERSION_STR);
+  ROS_INFO_STREAM("SDK version: " << version);
   ROS_INFO_STREAM("device uid: " << device_info_->uid());
   ROS_INFO_STREAM("device connection Type: " << connection_type);
   ROS_INFO_STREAM("Current node pid: " << getpid());
@@ -635,13 +653,21 @@ bool OBCameraNodeDriver::rebootDeviceServiceCallback(std_srvs::EmptyRequest &req
   (void)req;
   (void)res;
   if (!device_connected_) {
-    ROS_INFO("Device not connected");
+    ROS_WARN("Device not connected");
     return false;
   }
   ROS_INFO("Reboot device");
-  ob_camera_node_->rebootDevice();
-  device_connected_ = false;
-  device_ = nullptr;
+  try {
+    ob_camera_node_->rebootDevice();
+    device_connected_ = false;
+    device_ = nullptr;
+  } catch (const ob::Error &e) {
+    ROS_WARN("Failed to reboot device (expected in some cases): %s", e.getMessage());
+  } catch (const std::exception &e) {
+    ROS_ERROR("Exception during reboot: %s", e.what());
+  } catch (...) {
+    ROS_ERROR("Unknown error occurred during reboot");
+  }
   return true;
 }
 }  // namespace orbbec_camera

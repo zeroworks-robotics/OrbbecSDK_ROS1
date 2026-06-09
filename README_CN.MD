@@ -22,100 +22,116 @@ OrbbecSDK ROS 封装包为 Orbbec 相机与 ROS 环境之间提供了无缝集�
     </tr>
   </thead>
   <tbody>
+      <tr>
+      <td style="text-align: center; font-weight: bold;">Gemini 435Le</td>
+      <td>Gemini 435Le</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
     <tr>
       <td rowspan="8" style="text-align: center; font-weight: bold;">Gemini 330</td>
+      <td>Gemini 335Le</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
       <td>Gemini 335</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 336</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 330</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 335L</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 336L</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 330L</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 335Lg</td>
-      <td>不支持</td>
-      <td>推荐用于新设计</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
-      <td>Gemini 335Le</td>
-      <td>不支持</td>
-      <td>推荐用于新设计</td>
-    </tr>
-    <tr>
-      <td rowspan="3" style="text-align: center; font-weight: bold;">Gemini 2</td>
+      <td rowspan="5" style="text-align: center; font-weight: bold;">Gemini 2</td>
       <td>Gemini 2</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 2 L</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Gemini 2 XL</td>
-      <td>推荐用于新设计</td>
-      <td>即将支持</td>
+      <td>recommended for new designs</td>
+      <td>to be supported</td>
+    </tr>
+    <tr>
+      <td>Gemini 215</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 210</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td rowspan="3" style="text-align: center; font-weight: bold;">Femto</td>
       <td>Femto Bolt</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Femto Mega</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Femto Mega I</td>
-      <td>全面维护</td>
-      <td>即将支持</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td rowspan="3" style="text-align: center; font-weight: bold;">Astra</td>
       <td>Astra 2</td>
-      <td>全面维护</td>
-      <td>推荐用于新设计</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td>Astra+</td>
-      <td>有限的维护</td>
-      <td>不支持</td>
+      <td>limited maintenance</td>
+      <td>not supported</td>
     </tr>
     <tr>
       <td>Astra Pro Plus</td>
-      <td>有限的维护</td>
-      <td>不支持</td>
+      <td>limited maintenance</td>
+      <td>not supported</td>
     </tr>
     <tr>
       <td style="text-align: center; font-weight: bold;">Astra Mini</td>
-      <td>Astra Mini Pro</td>
-      <td>全面维护</td>
-      <td>不支持</td>
+      <td>Astra Mini (S) Pro</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
     </tr>
   </tbody>
 </table>
@@ -132,12 +148,13 @@ OrbbecSDK ROS 封装包为 Orbbec 相机与 ROS 环境之间提供了无缝集�
 
 ## 目录
 
-- [OrbbecSDK ROS v2](#orbbecsdk-ros-v2)
+- [OrbbecSDK ROS](#orbbecsdk-ros)
   - [目录](#目录)
   - [安装说明](#安装说明)
   - [创建 ROS 工作区并构建](#创建-ros-工作区并构建)
   - [启动相机](#启动相机)
   - [选择您想要显示的topic](#选择您想要显示的topic)
+  - [Network camera](#network-camera)
   - [Launch参数](#launch参数)
   - [深度工作模式开关](#深度工作模式开关)
   - [深度 NFOV 和 WFOV 模式的配置](#深度-nfov-和-wfov-模式的配置)
@@ -503,25 +520,32 @@ bash .make_deb.sh
 
 OrbbecSDK ROS Wrapper 支持以下设备。
 
-| 产品列表                              | 最低固件版本 | **Launch File**             |
-| :------------------------------------ | :----------- | :-------------------------- |
-| Astra+                                | 1.0.19       | astra_adv.launch.py         |
-| Astra Mini /Astra Mini Pro /Astra Pro | 1007         | astra.launch.py             |
-| Astra Mini Pro S                      | 1005         | astra.launch.py             |
-| Astra 2                               | 2.8.20       | astra2.launch.py            |
-| Dabai                                 | 2436         | dabai.launch.py             |
-| Dabai DW                              | 2606         | dabai_dw.launch.py          |
-| Dabai DCW                             | 2460         | dabai_dcw.launch.py         |
-| Femto/Femto W                         | 1.1.8        | femto.launch.py             |
-| Femto Mega                            | 1.1.7        | femto_mega.launch.py        |
-| Femto Bolt                            | 1.0.6        | femto_bolt.launch.py        |
-| Femto Mega I                          | 2.0.2        | femto_net_camera.launch.py  |
-| Gemini                                | 3018         | gemini.launch.py            |
-| Gemini 2 / Dabai DCL                  | 1.4.60       | gemini2.launch.py           |
-| Gemini 2 L                            | 1.4.32       | gemini2L.launch.py          |
-| Gemini E                              | 3460         | gemini_e.launch.py          |
-| Gemini E Lite                         | 3606         | gemini_e_lite.launch.py     |
-| Gemini 335/335L/336/336L              | 1.2.20       | gemini_330_series.launch.py |
+| 产品列表          | **Launch File**             |
+| ---------------- | --------------------------- |
+| Gemini 330       | gemini_330_series.launch |
+| Gemini 330L      | gemini_330_series.launch |
+| Gemini 335       | gemini_330_series.launch |
+| Gemini 335L      | gemini_330_series.launch |
+| Gemini 336       | gemini_330_series.launch |
+| Gemini 336L      | gemini_330_series.launch |
+| Femto Bolt       | femto_bolt.launch        |
+| Femto Mega       | femto_mega.launch        |
+| Femto Mega I     | femto_mega.launch        |
+| Gemini 2 XL      | gemini2XL.launch         |
+| Astra 2          | astra2.launch            |
+| Gemini 2 L       | gemini2L.launch          |
+| Gemini 2         | gemini2.launch           |
+| Astra+           | astra_adv.launch         |
+| Femto            | femto.launch             |
+| DaBai            | dabai.launch             |
+| DaBai DCW        | dabai_dcw.launch         |
+| DaBai DW         | dabai_dw.launch          |
+| Astra Mini Pro   | astra.launch             |
+| Gemini E         | gemini_e.launch          |
+| Gemini E Lite    | gemini_e_lite.launch     |
+| Gemini           | gemini.launch            |
+| Astra Mini S Pro | astra.launch             |
+| Astra Pro Plus   | astra_pro_plus.launch    |
 
 > [!重要]
 >

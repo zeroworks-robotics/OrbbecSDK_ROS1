@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(orbbec_camera)
 
 # Compiler settings
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
@@ -262,7 +262,7 @@ install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_nodelet ${EXECUTABLES}
 
 if(DEFINED ENV{BUILDING_PACKAGE})
   # Install udev rules
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/99-obsensor-ros1-libusb.rules
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/99-obsensor-libusb.rules
     DESTINATION /etc/udev/rules.d
   )
 endif()

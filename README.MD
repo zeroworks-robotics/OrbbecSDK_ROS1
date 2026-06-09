@@ -20,8 +20,19 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
     </tr>
   </thead>
   <tbody>
+      <tr>
+      <td style="text-align: center; font-weight: bold;">Gemini 435Le</td>
+      <td>Gemini 435Le</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
     <tr>
       <td rowspan="8" style="text-align: center; font-weight: bold;">Gemini 330</td>
+      <td>Gemini 335Le</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
       <td>Gemini 335</td>
       <td>full maintenance</td>
       <td>recommended for new designs</td>
@@ -57,12 +68,7 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
       <td>recommended for new designs</td>
     </tr>
     <tr>
-      <td>Gemini 335Le</td>
-      <td>not supported</td>
-      <td>recommended for new designs</td>
-    </tr>
-    <tr>
-      <td rowspan="3" style="text-align: center; font-weight: bold;">Gemini 2</td>
+      <td rowspan="5" style="text-align: center; font-weight: bold;">Gemini 2</td>
       <td>Gemini 2</td>
       <td>full maintenance</td>
       <td>recommended for new designs</td>
@@ -78,6 +84,16 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
       <td>to be supported</td>
     </tr>
     <tr>
+      <td>Gemini 215</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 210</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
       <td rowspan="3" style="text-align: center; font-weight: bold;">Femto</td>
       <td>Femto Bolt</td>
       <td>full maintenance</td>
@@ -91,7 +107,7 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
     <tr>
       <td>Femto Mega I</td>
       <td>full maintenance</td>
-      <td>to be supported</td>
+      <td>recommended for new designs</td>
     </tr>
     <tr>
       <td rowspan="3" style="text-align: center; font-weight: bold;">Astra</td>
@@ -111,9 +127,9 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
     </tr>
     <tr>
       <td style="text-align: center; font-weight: bold;">Astra Mini</td>
-      <td>Astra Mini Pro</td>
+      <td>Astra Mini (S) Pro</td>
       <td>full maintenance</td>
-      <td>not supported</td>
+      <td>recommended for new designs</td>
     </tr>
   </tbody>
 </table>
@@ -130,33 +146,33 @@ Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
 
 ## Table of Contents
 
-* [OrbbecSDK ROS](#orbbecsdk-ros)
-  * [Table of Contents](#table-of-contents)
-  * [Install Dependencies](#install-dependencies)
-    * [ROS](#ros)
-    * [Other Dependencies](#other-dependencies)
-  * [Create ROS Workspace and Build](#create-ros-workspace-and-build)
-  * [Start the Camera](#start-the-camera)
-  * [Select Topics and Control the Camera](#select-topics-and-control-the-camera)
-  * [Launch Parameters](#launch-parameters)
-  * [Depth work mode switch:](#depth-work-mode-switch)
-  * [Configuration of depth NFOV and WFOV modes](#configuration-of-depth-nfov-and-wfov-modes)
-  * [Check which profiles the camera supports](#check-which-profiles-the-camera-supports)
-  * [Multiple Camera Support](#multiple-camera-support)
-  * [Available Services for Camera Control](#available-services-for-camera-control)
-  * [Available Topics](#available-topics)
-  * [Building a Debian Package](#building-a-debian-package)
-  * [Launch files](#launch-files)
-  * [Use Nodelet](#use-nodelet)
-  * [Supported hardware products](#supported-hardware-products)
-  * [Frequently Asked Questions](#frequently-asked-questions)
-    * [Unexpected Crash](#unexpected-crash)
-    * [No Data Stream from Multiple Cameras](#no-data-stream-from-multiple-cameras)
-    * [Compilation Failure Due to OpenCV Version Issues](#compilation-failure-due-to-opencv-version-issues)
-    * [Additional Troubleshooting](#additional-troubleshooting)
-    * [Why Are There So Many Launch Files?](#why-are-there-so-many-launch-files)
-  * [Other useful links](#other-useful-links)
-  * [License](#license)
+- [OrbbecSDK ROS](#orbbecsdk-ros)
+  - [Table of Contents](#table-of-contents)
+  - [Install Dependencies](#install-dependencies)
+    - [ROS](#ros)
+    - [Other Dependencies](#other-dependencies)
+  - [Create ROS Workspace and Build](#create-ros-workspace-and-build)
+  - [Start the Camera](#start-the-camera)
+  - [Select Topics and Control the Camera](#select-topics-and-control-the-camera)
+  - [Network camera](#network-camera)
+  - [Launch Parameters](#launch-parameters)
+  - [Depth work mode switch:](#depth-work-mode-switch)
+  - [Configuration of depth NFOV and WFOV modes](#configuration-of-depth-nfov-and-wfov-modes)
+  - [Check which profiles the camera supports](#check-which-profiles-the-camera-supports)
+  - [Multiple Camera Support](#multiple-camera-support)
+  - [Available Services for Camera Control](#available-services-for-camera-control)
+  - [Available Topics](#available-topics)
+  - [Building a Debian Package](#building-a-debian-package)
+  - [Use Nodelet](#use-nodelet)
+  - [Supported Devices](#supported-devices)
+  - [Frequently Asked Questions](#frequently-asked-questions)
+    - [Unexpected Crash](#unexpected-crash)
+    - [No Data Stream from Multiple Cameras](#no-data-stream-from-multiple-cameras)
+    - [Compilation Failure Due to OpenCV Version Issues](#compilation-failure-due-to-opencv-version-issues)
+    - [Additional Troubleshooting](#additional-troubleshooting)
+    - [Why Are There So Many Launch Files?](#why-are-there-so-many-launch-files)
+  - [Other useful links](#other-useful-links)
+  - [License](#license)
 
 ## Install Dependencies
 
@@ -525,30 +541,32 @@ For users who need to use nodelet, please refer to `gemini2_nodelet.launch`
 
 The following devices are supported by the OrbbecSDK ROS1 Wrapper.
 
-| Product          | **Minimal Firmware Version** | launch file              |
-| ---------------- | ---------------------------------- | ------------------------ |
-| Gemini 330       | 1.2.20                             | gemini_330_series.launch |
-| Gemini 330L      | 1.2.20                             | gemini_330_series.launch |
-| Gemini 335       | 1.2.20                             | gemini_330_series.launch |
-| Gemini 335L      | 1.2.20                             | gemini_330_series.launch |
-| Gemini 336       | 1.2.20                             | gemini_330_series.launch |
-| Gemini 336L      | 1.2.20                             | gemini_330_series.launch |
-| Femto Bolt       | 1.0.6                              | femto_bolt.launch        |
-| Femto Mega       | 1.1.7                              | femto_mega.launch        |
-| Gemini 2 XL      | Obox: V1.2.5 VL:1.4.54             | gemini2XL.launch         |
-| Astra 2          | 2.8.20                             | astra2.launch            |
-| Gemini 2 L       | 1.4.32                             | gemini2L.launch          |
-| Gemini 2         | 1.4.60                             | gemini2.launch           |
-| Astra+           | 1.0.19                             | astra_adv.launch         |
-| Femto            | 1.6.7                              | femto.launch             |
-| DaBai            | 2436                               | dabai.launch             |
-| DaBai DCW        | 2460                               | dabai_dcw.launch         |
-| DaBai DW         | 2606                               | dabai_dw.launch          |
-| Astra Mini Pro   | 1007                               | astra.launch             |
-| Gemini E         | 3460                               | gemini_e.launch          |
-| Gemini E Lite    | 3606                               | gemini_e_lite.launch     |
-| Gemini           | 3018                               | gemini.launch            |
-| Astra Mini S Pro | 1005                               | astra.launch             |
+| Product          | launch file              |
+| ---------------- | --------------------------- |
+| Gemini 330       | gemini_330_series.launch |
+| Gemini 330L      | gemini_330_series.launch |
+| Gemini 335       | gemini_330_series.launch |
+| Gemini 335L      | gemini_330_series.launch |
+| Gemini 336       | gemini_330_series.launch |
+| Gemini 336L      | gemini_330_series.launch |
+| Femto Bolt       | femto_bolt.launch        |
+| Femto Mega       | femto_mega.launch        |
+| Femto Mega I     | femto_mega.launch        |
+| Gemini 2 XL      | gemini2XL.launch         |
+| Astra 2          | astra2.launch            |
+| Gemini 2 L       | gemini2L.launch          |
+| Gemini 2         | gemini2.launch           |
+| Astra+           | astra_adv.launch         |
+| Femto            | femto.launch             |
+| DaBai            | dabai.launch             |
+| DaBai DCW        | dabai_dcw.launch         |
+| DaBai DW         | dabai_dw.launch          |
+| Astra Mini Pro   | astra.launch             |
+| Gemini E         | gemini_e.launch          |
+| Gemini E Lite    | gemini_e_lite.launch     |
+| Gemini           | gemini.launch            |
+| Astra Mini S Pro | astra.launch             |
+| Astra Pro Plus   | astra_pro_plus.launch    |
 
 > [!IMPORTANT]
 >
