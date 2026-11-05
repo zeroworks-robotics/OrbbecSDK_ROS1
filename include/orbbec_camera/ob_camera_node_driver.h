@@ -111,6 +111,9 @@ class OBCameraNodeDriver {
   std::mutex frame_watchdog_lock_;
   std::condition_variable frame_watchdog_cv_;
   static constexpr int kFrameTimeoutExitCode = 76;
+  // Left by the watchdog before exiting; the respawned node then reboots the camera once, since
+  // a camera whose stream died can stay stuck for a fresh process too (seen on Gemini 335)
+  std::string frame_watchdog_marker_path_;
   pthread_mutex_t* orb_device_lock_ = nullptr;
   pthread_mutexattr_t orb_device_lock_attr_;
   uint8_t* orb_device_lock_shm_addr_ = nullptr;

@@ -238,6 +238,14 @@ void OBCameraNodeDriver::init() {
   ip_address_ = nh_private_.param<std::string>("ip_address", "");
   port_ = nh_private_.param<int>("port", 0);
   enable_hardware_reset_ = nh_private_.param<bool>("enable_hardware_reset", false);
+  frame_watchdog_marker_path_ = "/tmp/orbbec_" + g_camera_name + "_frame_watchdog_reboot";
+  if (boost::filesystem::exists(frame_watchdog_marker_path_)) {
+    // Previous process exited on a frame freeze: reboot the camera once before streaming
+    boost::system::error_code ec;
+    boost::filesystem::remove(frame_watchdog_marker_path_, ec);
+    ROS_WARN_STREAM("Previous node exited on a frame freeze, rebooting the camera before use");
+    enable_hardware_reset_ = true;
+  }
   uvc_backend_ = nh_private_.param<std::string>("uvc_backend", "libuvc");
   preset_firmware_path_ = nh_private_.param<std::string>("preset_firmware_path", "");
   upgrade_firmware_ = nh_private_.param<std::string>("upgrade_firmware", "");
@@ -799,6 +807,7 @@ void OBCameraNodeDriver::frameWatchdogThread() {
                      << " frames for " << elapsed_ms << " ms (timeout " << frame_timeout_ms_ << " ms) on camera "
                      << g_camera_name << ", exiting with code " << kFrameTimeoutExitCode
                      << " so the node is respawned");
+    std::ofstream(frame_watchdog_marker_path_) << elapsed_ms << std::endl;
     std::cout.flush();
     std::cerr.flush();
     _exit(kFrameTimeoutExitCode);  // skip destructors: teardown may block on the frozen SDK
