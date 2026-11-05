@@ -773,15 +773,30 @@ void OBCameraNodeDriver::frameWatchdogThread() {
     if (!heartbeat || !heartbeat->active.load()) {
       continue;  // no pipeline running (not connected yet, streams disabled, or reset done)
     }
-    const int64_t elapsed_ms =
-        (FrameHeartbeat::nowNs() - heartbeat->last_frame_ns.load()) / 1000000;
-    if (elapsed_ms < frame_timeout_ms_) {
+    // Find the expected stream that has been silent the longest
+    const uint32_t expected_mask = heartbeat->expected_mask.load();
+    const int64_t now_ns = FrameHeartbeat::nowNs();
+    int64_t elapsed_ms = 0;
+    int stalled_type = -1;
+    for (int type = 0; type < OB_FRAME_TYPE_COUNT; type++) {
+      if (!(expected_mask & (1u << type))) {
+        continue;
+      }
+      const int64_t stream_elapsed_ms = (now_ns - heartbeat->last_frame_ns[type].load()) / 1000000;
+      if (stalled_type < 0 || stream_elapsed_ms > elapsed_ms) {
+        elapsed_ms = stream_elapsed_ms;
+        stalled_type = type;
+      }
+    }
+    if (stalled_type < 0 || elapsed_ms < frame_timeout_ms_) {
       continue;
     }
     // In-process recovery is not trusted here: stopping a frozen pipeline can hang. Exit so the
     // launch file's respawn (or systemd) starts a fresh process with a fresh ob::Context.
-    ROS_FATAL_STREAM("Frame watchdog: no frames for "
-                     << elapsed_ms << " ms (timeout " << frame_timeout_ms_ << " ms) on camera "
+    ROS_FATAL_STREAM("Frame watchdog: no "
+                     << ob::TypeHelper::convertOBFrameTypeToString(
+                            static_cast<OBFrameType>(stalled_type))
+                     << " frames for " << elapsed_ms << " ms (timeout " << frame_timeout_ms_ << " ms) on camera "
                      << g_camera_name << ", exiting with code " << kFrameTimeoutExitCode
                      << " so the node is respawned");
     std::cout.flush();

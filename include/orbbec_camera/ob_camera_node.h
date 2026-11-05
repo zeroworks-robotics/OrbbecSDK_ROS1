@@ -35,6 +35,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <condition_variable>
 #include <thread>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <mutex>
@@ -55,11 +56,14 @@
 #include <diagnostic_updater/diagnostic_updater.h>
 
 namespace orbbec_camera {
-// Frame liveness shared with OBCameraNodeDriver's frame watchdog. Lock-free on purpose: the
-// watchdog must still work when an SDK call hangs while holding device_lock_.
+// Per-stream frame liveness shared with OBCameraNodeDriver's frame watchdog. Tracked per frame
+// type because with frame_aggregate_mode ANY a dead stream (e.g. color) still leaves framesets
+// of the other streams flowing. Lock-free on purpose: the watchdog must still work when an SDK
+// call hangs while holding device_lock_.
 struct FrameHeartbeat {
   std::atomic_bool active{false};           // true while the main pipeline is started
-  std::atomic<int64_t> last_frame_ns{0};    // steady_clock time of the last frameset
+  std::atomic<uint32_t> expected_mask{0};   // bit (1 << OBFrameType) per stream that must flow
+  std::array<std::atomic<int64_t>, OB_FRAME_TYPE_COUNT> last_frame_ns{};  // steady_clock ns
 
   static int64_t nowNs() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
