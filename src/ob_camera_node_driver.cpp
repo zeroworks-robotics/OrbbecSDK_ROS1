@@ -21,6 +21,7 @@
 #include <sys/shm.h>
 #include <ros/package.h>
 #include <regex>
+#include <algorithm>
 #include <sys/mman.h>
 #include <iomanip>  // For std::put_time
 
@@ -103,6 +104,14 @@ OBCameraNodeDriver::OBCameraNodeDriver(ros::NodeHandle &nh, ros::NodeHandle &nh_
 
 OBCameraNodeDriver::~OBCameraNodeDriver() {
   is_alive_ = false;
+  // Stop the frame watchdog first so a slow teardown below is not mistaken for a freeze
+  {
+    std::lock_guard<std::mutex> lock(frame_watchdog_lock_);
+    frame_watchdog_cv_.notify_all();
+  }
+  if (frame_watchdog_thread_ && frame_watchdog_thread_->joinable()) {
+    frame_watchdog_thread_->join();
+  }
   // Stop the timer first to prevent any callbacks from executing during destruction
   if (check_connection_timer_) {
     check_connection_timer_.stop();
@@ -223,6 +232,7 @@ void OBCameraNodeDriver::init() {
   serial_number_ = nh_private_.param<std::string>("serial_number", "");
   usb_port_ = nh_private_.param<std::string>("usb_port", "");
   connection_delay_ = nh_private_.param<int>("connection_delay", 100);
+  frame_timeout_ms_ = nh_private_.param<int>("frame_timeout_ms", 5000);
   device_num_ = static_cast<int>(nh_private_.param<int>("device_num", 1));
   enumerate_net_device_ = nh_private_.param<bool>("enumerate_net_device", false);
   ip_address_ = nh_private_.param<std::string>("ip_address", "");
@@ -262,6 +272,10 @@ void OBCameraNodeDriver::init() {
       });
   query_thread_ = std::make_shared<std::thread>([this]() { queryDevice(); });
   reset_device_thread_ = std::make_shared<std::thread>([this]() { resetDeviceThread(); });
+  if (device_type_ == "camera" && frame_timeout_ms_ > 0) {
+    ROS_INFO_STREAM("Frame watchdog enabled, timeout " << frame_timeout_ms_ << " ms");
+    frame_watchdog_thread_ = std::make_shared<std::thread>([this]() { frameWatchdogThread(); });
+  }
   if (device_type_ == "camera") {
     device_status_pub_ =
         nh_.advertise<orbbec_camera::DeviceStatus>("/" + g_camera_name + "/device_status", 1);
@@ -455,6 +469,9 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
         return;
       }
     }
+    // Arm the frame watchdog only after any firmware update: frames stop while flashing, and
+    // exiting mid-update could brick the device
+    std::atomic_store(&frame_heartbeat_, ob_camera_node_->getFrameHeartbeat());
   } else if (device_type_ == "lidar") {
     ob_lidar_node_ = std::make_shared<orbbec_lidar::OBLidarNode>(nh_, nh_private_, device_);
     if (!upgrade_firmware_.empty()) {
@@ -739,6 +756,37 @@ void OBCameraNodeDriver::resetDeviceThread() {
 
     reset_device_cv_.notify_all();
     ROS_INFO_STREAM("resetDeviceThread: device is disconnected, reset device end");
+  }
+}
+
+void OBCameraNodeDriver::frameWatchdogThread() {
+  // Runs on its own thread and reads the heartbeat lock-free, so it still fires when the ROS
+  // callback queue or device_lock_ is stuck inside a hung SDK call.
+  const auto period = std::chrono::milliseconds(std::max(100, std::min(1000, frame_timeout_ms_ / 5)));
+  std::unique_lock<std::mutex> lock(frame_watchdog_lock_);
+  while (is_alive_ && ros::ok()) {
+    frame_watchdog_cv_.wait_for(lock, period, [this]() { return !is_alive_; });
+    if (!is_alive_ || !ros::ok()) {
+      break;
+    }
+    auto heartbeat = std::atomic_load(&frame_heartbeat_);
+    if (!heartbeat || !heartbeat->active.load()) {
+      continue;  // no pipeline running (not connected yet, streams disabled, or reset done)
+    }
+    const int64_t elapsed_ms =
+        (FrameHeartbeat::nowNs() - heartbeat->last_frame_ns.load()) / 1000000;
+    if (elapsed_ms < frame_timeout_ms_) {
+      continue;
+    }
+    // In-process recovery is not trusted here: stopping a frozen pipeline can hang. Exit so the
+    // launch file's respawn (or systemd) starts a fresh process with a fresh ob::Context.
+    ROS_FATAL_STREAM("Frame watchdog: no frames for "
+                     << elapsed_ms << " ms (timeout " << frame_timeout_ms_ << " ms) on camera "
+                     << g_camera_name << ", exiting with code " << kFrameTimeoutExitCode
+                     << " so the node is respawned");
+    std::cout.flush();
+    std::cerr.flush();
+    _exit(kFrameTimeoutExitCode);  // skip destructors: teardown may block on the frozen SDK
   }
 }
 

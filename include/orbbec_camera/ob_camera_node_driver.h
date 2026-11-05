@@ -62,6 +62,8 @@ class OBCameraNodeDriver {
 
   void resetDeviceThread();
 
+  void frameWatchdogThread();
+
   void deviceStatusTimer();
 
   static std::string parseUsbPort(const std::string& line);
@@ -102,6 +104,13 @@ class OBCameraNodeDriver {
   std::condition_variable reset_device_cv_;
   std::atomic_bool reset_device_{false};
   std::mutex reset_device_lock_;
+  // Frame watchdog: exits the process when frames stop so launch respawn restarts the node
+  int frame_timeout_ms_ = 5000;  // 0 disables the frame watchdog
+  std::shared_ptr<FrameHeartbeat> frame_heartbeat_ = nullptr;  // access via std::atomic_load/store
+  std::shared_ptr<std::thread> frame_watchdog_thread_ = nullptr;
+  std::mutex frame_watchdog_lock_;
+  std::condition_variable frame_watchdog_cv_;
+  static constexpr int kFrameTimeoutExitCode = 76;
   pthread_mutex_t* orb_device_lock_ = nullptr;
   pthread_mutexattr_t orb_device_lock_attr_;
   uint8_t* orb_device_lock_shm_addr_ = nullptr;

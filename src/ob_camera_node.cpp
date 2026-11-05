@@ -713,6 +713,9 @@ void OBCameraNode::startStreams() {
           std::make_shared<std::thread>([this]() { onNewRightColorFrameCallback(); });
     }
     init_interleave_mode();
+    // Start the watchdog grace period now; arriving framesets overwrite this
+    frame_heartbeat_->last_frame_ns.store(FrameHeartbeat::nowNs());
+    frame_heartbeat_->active.store(true);
     pipeline_started_ = true;
   } else {
     for (const auto& stream_index : IMAGE_STREAMS) {
@@ -877,6 +880,8 @@ void OBCameraNode::stopStreams() {
     } catch (const ob::Error& e) {
       ROS_ERROR_STREAM("Failed to stop pipeline: " << orbbec_camera::formatObErrorWithStatus(e));
     }
+    // Cleared only after stop() returns, so a pipeline stop that hangs still trips the watchdog
+    frame_heartbeat_->active.store(false);
     pipeline_started_ = false;
   } else {
     for (const auto& stream_index : IMAGE_STREAMS) {
@@ -1645,6 +1650,10 @@ uint64_t OBCameraNode::getFrameTimestampUs(const std::shared_ptr<ob::Frame>& fra
 }
 
 void OBCameraNode::onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set) {
+  if (frame_set != nullptr) {
+    // Count every frameset for the frame watchdog, even ones dropped before init finishes
+    frame_heartbeat_->last_frame_ns.store(FrameHeartbeat::nowNs());
+  }
   if (!is_running_) {
     ROS_WARN_ONCE("Frame callback called before initialization");
     return;
