@@ -713,6 +713,19 @@ void OBCameraNode::startStreams() {
           std::make_shared<std::thread>([this]() { onNewRightColorFrameCallback(); });
     }
     init_interleave_mode();
+    // Expect every image stream the pipeline was configured with; each gets a grace period
+    // starting now, and its arriving frames overwrite it
+    const int64_t start_ns = FrameHeartbeat::nowNs();
+    uint32_t expected_mask = 0;
+    for (const auto& stream_index : IMAGE_STREAMS) {
+      if (enable_stream_[stream_index]) {
+        const auto frame_type = STREAM_TYPE_TO_FRAME_TYPE.at(stream_index.first);
+        frame_heartbeat_->last_frame_ns[frame_type].store(start_ns);
+        expected_mask |= (1u << frame_type);
+      }
+    }
+    frame_heartbeat_->expected_mask.store(expected_mask);
+    frame_heartbeat_->active.store(true);
     pipeline_started_ = true;
   } else {
     for (const auto& stream_index : IMAGE_STREAMS) {
@@ -877,6 +890,8 @@ void OBCameraNode::stopStreams() {
     } catch (const ob::Error& e) {
       ROS_ERROR_STREAM("Failed to stop pipeline: " << orbbec_camera::formatObErrorWithStatus(e));
     }
+    // Cleared only after stop() returns, so a pipeline stop that hangs still trips the watchdog
+    frame_heartbeat_->active.store(false);
     pipeline_started_ = false;
   } else {
     for (const auto& stream_index : IMAGE_STREAMS) {
@@ -1645,6 +1660,17 @@ uint64_t OBCameraNode::getFrameTimestampUs(const std::shared_ptr<ob::Frame>& fra
 }
 
 void OBCameraNode::onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set) {
+  if (frame_set != nullptr) {
+    // Stamp each stream present for the frame watchdog, even in framesets dropped before init
+    const int64_t now_ns = FrameHeartbeat::nowNs();
+    const uint32_t frame_count = frame_set->getCount();
+    for (uint32_t i = 0; i < frame_count; i++) {
+      auto frame = frame_set->getFrameByIndex(i);
+      if (frame && frame->type() >= 0 && frame->type() < OB_FRAME_TYPE_COUNT) {
+        frame_heartbeat_->last_frame_ns[frame->type()].store(now_ns);
+      }
+    }
+  }
   if (!is_running_) {
     ROS_WARN_ONCE("Frame callback called before initialization");
     return;

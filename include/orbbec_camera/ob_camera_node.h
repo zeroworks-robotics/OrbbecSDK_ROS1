@@ -35,7 +35,9 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <condition_variable>
 #include <thread>
+#include <array>
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <map>
 #include <camera_info_manager/camera_info_manager.h>
@@ -54,6 +56,22 @@
 #include <diagnostic_updater/diagnostic_updater.h>
 
 namespace orbbec_camera {
+// Per-stream frame liveness shared with OBCameraNodeDriver's frame watchdog. Tracked per frame
+// type because with frame_aggregate_mode ANY a dead stream (e.g. color) still leaves framesets
+// of the other streams flowing. Lock-free on purpose: the watchdog must still work when an SDK
+// call hangs while holding device_lock_.
+struct FrameHeartbeat {
+  std::atomic_bool active{false};           // true while the main pipeline is started
+  std::atomic<uint32_t> expected_mask{0};   // bit (1 << OBFrameType) per stream that must flow
+  std::array<std::atomic<int64_t>, OB_FRAME_TYPE_COUNT> last_frame_ns{};  // steady_clock ns
+
+  static int64_t nowNs() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+  }
+};
+
 class OBCameraNode {
  public:
   OBCameraNode(ros::NodeHandle &nh, ros::NodeHandle &nh_private,
@@ -84,6 +102,8 @@ class OBCameraNode {
 
   // Static method for global resource cleanup (called at process termination)
   static void forceCleanupGlobalResources();
+  std::shared_ptr<FrameHeartbeat> getFrameHeartbeat() const { return frame_heartbeat_; }
+
   bool isParamCalibrated() const {
     return (color_camera_info_manager_ && color_camera_info_manager_->isCalibrated() &&
             ir_camera_info_manager_ && ir_camera_info_manager_->isCalibrated());
@@ -556,6 +576,7 @@ class OBCameraNode {
   sensor_msgs::PointCloud2 cloud_msg_;
   std::recursive_mutex cloud_mutex_;
   std::atomic_bool pipeline_started_{false};
+  std::shared_ptr<FrameHeartbeat> frame_heartbeat_ = std::make_shared<FrameHeartbeat>();
   bool enable_point_cloud_ = false;
   bool enable_colored_point_cloud_ = false;
   int point_cloud_decimation_filter_factor_ = 1;
